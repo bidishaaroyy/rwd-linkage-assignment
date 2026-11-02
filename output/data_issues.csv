@@ -1,0 +1,7 @@
+file,record_id,column,original_value,issue,action,reason,likely_impact
+ehr_patients.csv,EH81006,grade_group,7,Grade not 1-5 (n=1),Set to NA (shown as Missing),Invalid value,Counted as missing
+patients.csv,P00001;P00002;P00003;P00004;P00005,death_date,,Blank death date (expected) (n=646),Treated as alive at 2023-12-31,Complete registry assumed,None
+ehr_patients.csv,EH81463;EH81334;EH81223;EH81042;EH81496,baseline_psa_ng_ml,,Missing PSA (n=138),"Left missing, not imputed",Per brief,Reported in data-fitness section
+ehr_patients.csv,EH81537;EH81790;EH81414;EH81223;EH81615,grade_group,,Missing grade (n=210),Own 'Missing' category,Per brief,Reported in data-fitness section
+claims_events.csv,279;416;608;706;717,(row number),,Exact duplicate event rows (n=118),Kept; collapsed to one flag per patient,Repeats are expected,None
+ehr_events.csv,388;389;492;556;815,(row number),,Exact duplicate event rows (n=114),Kept; collapsed to one flag per patient,Repeats are expected,None

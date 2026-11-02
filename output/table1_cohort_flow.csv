@@ -1,0 +1,5 @@
+step,remaining,excluded
+Roster,800,0
+1. Age >= 66,675,125
+"2. Look-back (baseline cohort, used for mortality)",501,174
+"3. Observed through day 365 (capture cohort, used for treatment)",375,126

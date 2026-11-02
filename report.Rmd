@@ -1,0 +1,173 @@
+
+---
+title: "Treatment capture and 365-day mortality: linked claims + EHR"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+
+rd <- function(f) {
+  read_csv(file.path("output", f), show_col_types = FALSE)
+}
+
+flow  <- rd("table1_cohort_flow.csv")
+cap   <- rd("table2_capture.csv")
+agree <- rd("table_agreement.csv")
+dif   <- rd("capture_difference.csv")
+mort  <- rd("table3_mortality.csv")
+fit   <- rd("table_fitness.csv")
+ext   <- rd("table_ext_partd.csv")
+
+f1 <- function(x) sprintf("%.1f", x)
+
+ci <- function(r) {
+  sprintf(
+    "%s%% (95%% CI %s-%s)",
+    f1(r$pct), f1(r$lo), f1(r$hi)
+  )
+}
+
+N2 <- flow$remaining[3]
+N3 <- flow$remaining[4]
+
+claims_pct <- cap$pct[1]
+ehr_pct <- cap$pct[2]
+
+higher_source <- if (claims_pct > ehr_pct) {
+  "Claims"
+} else if (ehr_pct > claims_pct) {
+  "EHR"
+} else {
+  "Claims and EHR equally"
+}
+
+ext_diff <- if (nrow(ext) >= 2) {
+  abs(ext$pct[1] - ext$pct[2])
+} else {
+  NA_real_
+}
+```
+
+## Plan and assumptions
+
+Plan dated 2026-11-02 (see `plan.md`).
+
+The crosswalk is authoritative. Each source span is cut at the earliest of recorded end, registry death, and 2023-12-31. The treatment window covers elapsed days 0-365 inclusive. Only prostatectomy, radiation, and systemic therapy codes count as treatment. PSA and grade are not imputed. A blank death date indicates no recorded death by 2023-12-31.
+
+Data issues and their handling are documented in `data_issues.csv`.
+
+## Cohorts
+
+```{r flow}
+kable(
+  flow,
+  col.names = c("Step", "Remaining", "Excluded"),
+  caption = "Table 1. Cohort flow"
+)
+```
+
+The baseline cohort (n = `r N2`) requires pre-index observation and ascertainable mortality status. The capture cohort (n = `r N3`) additionally requires observation in both sources through day 365 to avoid classifying unobserved treatment as absent.
+
+## Treatment capture
+
+```{r cap}
+cap |>
+  transmute(
+    View = view,
+    Treated = treated,
+    N = n,
+    `% (Wilson 95% CI)` = sprintf(
+      "%s (%s-%s)",
+      f1(pct), f1(lo), f1(hi)
+    )
+  ) |>
+  kable(
+    caption = "Table 2. Any treatment recorded, days 0-365. Paired cohort."
+  )
+```
+
+![Plot A](plotA_capture.png)
+
+Claims recorded treatment in `r ci(cap[1,])`, EHR in `r ci(cap[2,])`, and either source in `r ci(cap[3,])`.
+
+Linkage increased capture by `r f1(dif$linked_minus_claims_pp[1])` percentage points over claims alone.
+
+Agreement: both sources `r agree$n[1]`, claims only `r agree$n[2]`, EHR only `r agree$n[3]`, neither `r agree$n[4]`.
+
+**Interpretation:** `r higher_source` recorded the higher treatment proportion. Source-specific records demonstrate complementary capture and incomplete overlap. No treatment recorded in either source does not necessarily mean no treatment was received.
+
+## Treatment patterns
+
+![Plot B](plotB_patterns.png)
+
+**Interpretation:** Plot B illustrates the distribution of recorded treatment combinations, including patients without any qualifying treatment record. These represent observed combinations, not treatment sequences or clinical intent.
+
+## 365-day all-cause mortality
+
+```{r mort}
+mort |>
+  transmute(
+    Endpoint = endpoint,
+    Denominator = denominator,
+    Deaths = deaths,
+    `% (Wilson 95% CI)` = sprintf(
+      "%s (%s-%s)",
+      f1(pct), f1(lo), f1(hi)
+    )
+  ) |>
+  kable(
+    caption = "Table 3. Mortality. The second row illustrates an inappropriate denominator."
+  )
+```
+
+Mortality was evaluated in the baseline cohort (n = `r N2`). Using the capture cohort would underestimate early mortality because patients dying before day 365 are excluded by design.
+
+The endpoint is all-cause mortality, not cancer-specific mortality. Treatment-group mortality comparisons were avoided because of immortal-time and selection bias.
+
+## Data fitness and limitations
+
+In the capture cohort, median baseline PSA was `r f1(fit$psa_median[1])` ng/mL.
+
+PSA was missing for `r fit$psa_missing_n[1]` patients (`r f1(fit$psa_missing_pct[1])`%) and grade group for `r fit$grade_missing_n[1]` (`r f1(fit$grade_missing_pct[1])`%). Neither variable was imputed.
+
+**Interpretation:** Missingness, source-specific capture, and Part D subgroup differences were quantified. Potential undercapture from care outside the EHR system, absent oral-drug claims, or records missing from both sources cannot be directly measured.
+
+Linked capture is therefore a lower bound on recorded treatment, not a confirmed estimate of true treatment prevalence. Continuous-observation requirements also limit generalizability.
+
+Wilson intervals describe hypothetical sampling variation, not capture bias or external validity. Observed proportions are exact for this finite synthetic extract.
+
+## Extension: Does Part D explain missing systemic therapy in claims?
+
+```{r ext}
+ext |>
+  transmute(
+    `Part D` = part_d,
+    `Also in claims` = x,
+    `EHR systemic` = total,
+    `% (Wilson 95% CI)` = sprintf(
+      "%s (%s-%s)",
+      f1(pct), f1(lo), f1(hi)
+    )
+  ) |>
+  kable(
+    caption = "Table 4. Claims capture of EHR-recorded systemic therapy by Part D."
+  )
+```
+
+![Extension](plotC_extension.png)
+
+**Interpretation:** Part D enrollment was examined as a potential explanation for missing systemic therapy claims. The observed capture difference between the two Part D groups was `r f1(ext_diff)` percentage points.
+
+Differences may reflect drug coverage, treatment types, patient characteristics, or prescriptions not dispensed. These descriptive findings cannot establish causality or fully explain missing claims.
+
+## AI use
+
+ChatGPT (OpenAI) was used to assist with report structuring, code review, syntax check and refinement of statistical interpretations and scientific language. Numerical results were generated from the supplied datasets using R.
