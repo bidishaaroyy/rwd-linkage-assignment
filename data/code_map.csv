@@ -1,0 +1,11 @@
+source,code,event_type,modality
+claims,CL_SURGERY,treatment,prostatectomy
+claims,CL_RADIATION,treatment,radiation
+claims,CL_ADT_INJ,treatment,systemic
+claims,CL_ADT_ORAL,treatment,systemic
+claims,CL_PSA,other,
+ehr,EH_SURGERY,treatment,prostatectomy
+ehr,EH_RADIATION,treatment,radiation
+ehr,EH_ADT_INJ,treatment,systemic
+ehr,EH_ADT_ORAL,treatment,systemic
+ehr,EH_PSA,other,
