@@ -1,0 +1,2 @@
+Date: 2026-11-02
+Plan: Link roster to claims/EHR IDs via the crosswalk. Effective observation end = earliest of recorded end, death date, 2023-12-31. Baseline cohort (age >= 66, 365-day look-back in both sources) is used for mortality. Capture cohort (both sources observed through day 365) is used for treatment. Treatment = prostatectomy/radiation/systemic only (never PSA), days 0-365 inclusive, one flag per patient. Wilson 95% CIs. Extension: does Part D explain claims missing EHR-recorded systemic therapy?
